@@ -258,6 +258,109 @@ test("Vertex Anthropic: VERTEX_ANTHROPIC_TOKEN takes precedence over auth.json",
   }
 })
 
+test("Vertex Anthropic: reads token from provider options.token in config", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            "google-vertex-anthropic": {
+              options: {
+                token: "config-token",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("GOOGLE_CLOUD_PROJECT", "my-project")
+      Env.set("VERTEX_ANTHROPIC_TOKEN", "")
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      const opts = providers["google-vertex-anthropic"].options
+      expect(opts?.googleAuthOptions).toBeDefined()
+      const accessToken = await opts?.googleAuthOptions?.authClient.getAccessToken()
+      expect(accessToken.token).toBe("config-token")
+    },
+  })
+})
+
+test("Vertex Anthropic: options.token takes precedence over env var", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            "google-vertex-anthropic": {
+              options: {
+                token: "config-token",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("GOOGLE_CLOUD_PROJECT", "my-project")
+      Env.set("VERTEX_ANTHROPIC_TOKEN", "env-token")
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      const accessToken = await providers["google-vertex-anthropic"].options?.googleAuthOptions?.authClient.getAccessToken()
+      expect(accessToken.token).toBe("config-token")
+    },
+  })
+})
+
+test("Vertex Anthropic: reads project and location from provider options", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            "google-vertex-anthropic": {
+              options: {
+                project: "config-project",
+                location: "europe-west1",
+                token: "config-token",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("GOOGLE_CLOUD_PROJECT", "")
+      Env.set("GCP_PROJECT", "")
+      Env.set("GCLOUD_PROJECT", "")
+      Env.set("VERTEX_ANTHROPIC_TOKEN", "")
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      expect(providers["google-vertex-anthropic"]).toBeDefined()
+      expect(providers["google-vertex-anthropic"].options?.project).toBe("config-project")
+      expect(providers["google-vertex-anthropic"].options?.location).toBe("europe-west1")
+    },
+  })
+})
+
 test("Vertex Anthropic: respects VERTEX_LOCATION env var", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
