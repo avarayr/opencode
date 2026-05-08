@@ -469,12 +469,15 @@ export namespace Provider {
         },
       }
     },
-    "google-vertex-anthropic": async () => {
+    "google-vertex-anthropic": async (provider) => {
       const auth = await Auth.get("google-vertex-anthropic")
-      const project = Env.get("GOOGLE_CLOUD_PROJECT") || Env.get("GCP_PROJECT") || Env.get("GCLOUD_PROJECT")
-      const location = Env.get("GOOGLE_CLOUD_LOCATION") || Env.get("VERTEX_LOCATION") || "global"
+      const project =
+        provider.options?.project || Env.get("GOOGLE_CLOUD_PROJECT") || Env.get("GCP_PROJECT") || Env.get("GCLOUD_PROJECT")
+      const location =
+        provider.options?.location || Env.get("GOOGLE_CLOUD_LOCATION") || Env.get("VERTEX_LOCATION") || "global"
 
-      const token = Env.get("VERTEX_ANTHROPIC_TOKEN") || (auth?.type === "api" ? auth.key : undefined)
+      const token =
+        provider.options?.token || Env.get("VERTEX_ANTHROPIC_TOKEN") || (auth?.type === "api" ? auth.key : undefined)
 
       const autoload = Boolean(project) || Boolean(token)
       if (!autoload) return { autoload: false }
